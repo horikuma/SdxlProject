@@ -17,6 +17,10 @@
   pointer-events: auto;
 }
 
+.mj-clip-btn--downloaded {
+  background: #808080;
+}
+
 .mj-clip-card {
   position: relative !important;
 }

@@ -21,6 +21,26 @@
     };
   };
 
+  const checkDownloaded = (jobId) => {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        {
+          type: "CHECK_EAGLE_ITEM",
+          jobId
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.warn("[MJ-CLIP] failed to check Eagle item", chrome.runtime.lastError);
+            resolve(false);
+            return;
+          }
+
+          resolve(Boolean(response?.downloaded));
+        }
+      );
+    });
+  };
+
   // click handler (delegation)
   document.addEventListener("click", async (e) => {
     const btn = e.target.closest(".mj-clip-btn");
@@ -59,6 +79,9 @@
       const a = card.querySelector('a[href^="/jobs/"]');
       if (!a) return;
 
+      const jobId = a?.href?.split('/jobs/')[1]?.split('?')[0];
+      if (!jobId) return;
+
       const btn = document.createElement("button");
       btn.type = "button";
       btn.textContent = "E";
@@ -69,6 +92,12 @@
         card.classList.add("mj-clip-card");
       }
       card.appendChild(btn);
+
+      checkDownloaded(jobId).then((downloaded) => {
+        if (downloaded) {
+          btn.classList.add("mj-clip-btn--downloaded");
+        }
+      });
     });
   };
 
