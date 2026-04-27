@@ -1,6 +1,26 @@
 (() => {
   console.log("[MJ-CLIP] content script loaded");
 
+  const parseMidjourneyImage = (backgroundImage) => {
+    const urlMatch = backgroundImage.match(
+      /https:\/\/cdn\.midjourney\.com\/[^/]+\/\d+_\d+_\d+_N\.webp/
+    );
+
+    if (!urlMatch) return null;
+
+    const sourceUrl = urlMatch[0];
+    const idxMatch = sourceUrl.match(/\/(\d+_\d+)_\d+_N\.webp$/);
+
+    if (!idxMatch) return null;
+
+    const [, idx] = idxMatch;
+
+    return {
+      idx,
+      imageUrl: sourceUrl.replace(/_\d+_N\.webp$/, ".png")
+    };
+  };
+
   // click handler (delegation)
   document.addEventListener("click", async (e) => {
     const btn = e.target.closest(".mj-clip-btn");
@@ -14,23 +34,18 @@
     const a = card.querySelector('a[href^="/jobs/"]');
     const jobId = a?.href?.split('/jobs/')[1]?.split('?')[0];
 
-    const img = card.querySelector("img");
-    const style = img?.getAttribute("style") || "";
-    const m = style.match(/\/(\d+_\d+)_\d+_N\.webp/);
-    let idx = m ? m[1] : "0_0";
+    const img = getComputedStyle(a).backgroundImage;
+    const parsed = parseMidjourneyImage(img);
+    const idx = parsed?.idx || "0_0";
+    const imageUrl = parsed?.imageUrl || null;
 
-    const bg = img ? getComputedStyle(img).backgroundImage : "";
-    const bgUrlMatch = bg.match(/url\(["']?(.*?)["']?\)/);
-    const imageUrl = bgUrlMatch?.[1] || img?.currentSrc || img?.src || null;
-
-    console.log("[MJ-CLIP] parsed", { jobId, idx, imageUrl });
+    console.log("[MJ-CLIP] parsed", { card, jobId, idx, imageUrl });
 
     if (!jobId) return;
 
     chrome.runtime.sendMessage({
       type: "ADD_TO_EAGLE",
       jobId,
-      idx,
       imageUrl,
       jobUrl: `https://www.midjourney.com/jobs/${jobId}`
     });
@@ -44,40 +59,14 @@
       const a = card.querySelector('a[href^="/jobs/"]');
       if (!a) return;
 
-      const jobId = a?.href?.split('/jobs/')[1]?.split('?')[0];
-
-      const img = card.querySelector("img");
-      const style = img?.getAttribute("style") || "";
-      const m = style.match(/\/(\d+_\d+)_\d+_N\.webp/);
-      let idx = m ? m[1] : "0_0";
-
-
       const btn = document.createElement("button");
+      btn.type = "button";
       btn.textContent = "E";
       btn.className = "mj-clip-btn";
-      btn.style.background = "#0066ff";
-      btn.style.color = "#ffffff";
-      btn.style.border = "none";
-      btn.style.borderRadius = "2px";
-      btn.style.width = "20px";
-      btn.style.height = "20px";
-      btn.style.lineHeight = "20px";
-      btn.style.textAlign = "center";
-      btn.style.padding = "0";
-      btn.style.fontWeight = "bold";
-
-      btn.style.background = "#0066ff";
-
-      btn.style.position = "absolute";
-      btn.style.zIndex = 9999;
-      btn.style.top = "6px";
-      btn.style.right = "6px";
-      btn.style.pointerEvents = "auto";
-      btn.style.display = "block";
 
       const cs = window.getComputedStyle(card);
       if (cs.position === "static") {
-        card.style.position = "relative";
+        card.classList.add("mj-clip-card");
       }
       card.appendChild(btn);
     });
