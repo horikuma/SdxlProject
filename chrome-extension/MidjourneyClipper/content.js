@@ -41,10 +41,31 @@
     });
   };
 
+  const addToEagle = (payload) => {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        {
+          type: "ADD_TO_EAGLE",
+          ...payload
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            console.warn("[MJ-CLIP] failed to add Eagle item", chrome.runtime.lastError);
+            resolve(false);
+            return;
+          }
+
+          resolve(Boolean(response?.success));
+        }
+      );
+    });
+  };
+
   // click handler (delegation)
   document.addEventListener("click", async (e) => {
     const btn = e.target.closest(".mj-clip-btn");
     if (!btn) return;
+    if (btn.classList.contains("mj-clip-btn--downloaded")) return;
 
     console.log("[MJ-CLIP] click detected");
 
@@ -63,12 +84,15 @@
 
     if (!jobId) return;
 
-    chrome.runtime.sendMessage({
-      type: "ADD_TO_EAGLE",
+    const success = await addToEagle({
       jobId,
       imageUrl,
       jobUrl: `https://www.midjourney.com/jobs/${jobId}`
     });
+
+    if (success) {
+      btn.classList.add("mj-clip-btn--downloaded");
+    }
   });
 
   // inject buttons

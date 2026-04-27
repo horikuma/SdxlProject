@@ -23,7 +23,7 @@ const addToEagle = async (msg) => {
   if (!headRes.ok) {
     await chrome.action.setBadgeText({ text: "404" });
     await chrome.action.setBadgeBackgroundColor({ color: "#ff0000" });
-    return;
+    return { success: false };
   }
 
   try {
@@ -47,11 +47,13 @@ const addToEagle = async (msg) => {
     // 応答受信
     await chrome.action.setBadgeText({ text: "OK" });
     await chrome.action.setBadgeBackgroundColor({ color: "#00aa00" });
+    return { success: true };
 
   } catch (e) {
     await chrome.action.setBadgeText({ text: "ERR" });
     await chrome.action.setBadgeBackgroundColor({ color: "#ff0000" });
     console.error("Eagle API error", e);
+    return { success: false, error: String(e) };
   }
 };
 
@@ -65,11 +67,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
 
     if (msg.type === "ADD_TO_EAGLE") {
-      await addToEagle(msg);
+      const result = await addToEagle(msg);
+      sendResponse(result);
     }
   })().catch((e) => {
     console.error("[MJ-CLIP] message handler error", e);
-    sendResponse({ downloaded: false, error: String(e) });
+    sendResponse({ success: false, downloaded: false, error: String(e) });
   });
   return true;
 });
